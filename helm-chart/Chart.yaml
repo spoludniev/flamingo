@@ -1,0 +1,22 @@
+apiVersion: v2
+name: fleetdm
+description: A Helm chart for FleetDM with MySQL and Redis dependencies
+type: application
+version: 0.1.0
+appVersion: "4.45.0"
+keywords:
+  - fleetdm
+  - device-management
+  - osquery
+maintainers:
+  - name: FleetDM Team
+dependencies:
+  - name: mysql
+    version: 11.0.0
+    repository: https://charts.bitnami.com/bitnami
+    condition: mysql.enabled
+  - name: redis
+    version: 19.0.0
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+

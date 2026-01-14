@@ -1,0 +1,102 @@
+graph TB
+    subgraph "GCP Organization"
+        subgraph "Production Project"
+            subgraph "VPC: company-prod-vpc"
+                subgraph "Public Subnets"
+                    LB[Cloud Load Balancer]
+                    NAT[NAT Gateway]
+                end
+                
+                subgraph "Private Subnets - AZ1"
+                    GKE1[GKE Node Pool 1<br/>e2-standard-4]
+                    subgraph "Kubernetes Cluster"
+                        subgraph "Backend Namespace"
+                            BE1[Flask Backend Pods<br/>HPA: 3-50 replicas]
+                        end
+                        subgraph "Frontend Namespace"
+                            FE1[React Frontend Pods<br/>HPA: 3-20 replicas]
+                        end
+                    end
+                end
+                
+                subgraph "Private Subnets - AZ2"
+                    GKE2[GKE Node Pool 2<br/>e2-standard-4]
+                    BE2[Flask Backend Pods]
+                    FE2[React Frontend Pods]
+                end
+                
+                subgraph "Database Subnets"
+                    DB_PEER[VPC Peering]
+                end
+            end
+        end
+        
+        subgraph "Staging Project"
+            STG_VPC[Staging VPC]
+            STG_GKE[Staging GKE]
+        end
+        
+        subgraph "Development Project"
+            DEV_VPC[Dev VPC]
+            DEV_EKS[Dev EKS]
+        end
+    end
+    
+    subgraph "MongoDB Atlas"
+        subgraph "Primary Region: us-central1"
+            MONGO_PRI[MongoDB Primary<br/>M10 Cluster]
+            MONGO_SEC1[MongoDB Secondary 1]
+            MONGO_SEC2[MongoDB Secondary 2]
+        end
+        subgraph "Secondary Region: us-east1"
+            MONGO_DR[MongoDB DR Replica]
+        end
+    end
+    
+    subgraph "External Services"
+        GITHUB[GitHub<br/>Source Code]
+        CLOUD_BUILD[Cloud Build<br/>CI/CD Pipeline]
+        GCR[Container Registry<br/>GCR/Artifact Registry]
+        SECRETS[Secret Manager]
+        MONITORING[Cloud Logging<br/>Prometheus/Grafana]
+    end
+    
+    subgraph "Users"
+        USERS[End Users]
+        DEVS[Developers]
+    end
+    
+    %% Connections
+    USERS -->|HTTPS| LB
+    LB -->|Internal| BE1
+    LB -->|Internal| BE2
+    BE1 -->|Serve| FE1
+    BE2 -->|Serve| FE2
+    BE1 -->|Read/Write| DB_PEER
+    BE2 -->|Read/Write| DB_PEER
+    DB_PEER -->|VPC Peering| MONGO_PRI
+    MONGO_PRI -->|Replication| MONGO_SEC1
+    MONGO_PRI -->|Replication| MONGO_SEC2
+    MONGO_PRI -->|Backup| MONGO_DR
+    
+    DEVS -->|Push Code| GITHUB
+    GITHUB -->|Trigger| CLOUD_BUILD
+    CLOUD_BUILD -->|Build & Push| GCR
+    GCR -->|Deploy| GKE1
+    GCR -->|Deploy| GKE2
+    
+    BE1 -->|Read Secrets| SECRETS
+    BE2 -->|Read Secrets| SECRETS
+    BE1 -->|Logs & Metrics| MONITORING
+    BE2 -->|Logs & Metrics| MONITORING
+    
+    GKE1 -->|Auto-scale| GKE2
+    GKE2 -->|Auto-scale| GKE1
+    
+    style LB fill:#4285f4
+    style MONGO_PRI fill:#13a52c
+    style GKE1 fill:#ea4335
+    style GKE2 fill:#ea4335
+    style CLOUD_BUILD fill:#fbbc04
+    style SECRETS fill:#34a853
+

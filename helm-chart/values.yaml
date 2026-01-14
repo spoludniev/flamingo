@@ -1,0 +1,133 @@
+# FleetDM Configuration
+fleetdm:
+  enabled: true
+  image:
+    repository: fleetdm/fleet
+    tag: "4.45.0"
+    pullPolicy: IfNotPresent
+  
+  replicaCount: 1
+  
+  server:
+    host: "0.0.0.0"
+    port: 8080
+    tls: false
+    
+  mysql:
+    address: "fleetdm-mysql:3306"
+    database: "fleet"
+    username: "fleet"
+    password: ""
+    # Password will be auto-generated if not set
+    
+  redis:
+    address: "fleetdm-redis-master:6379"
+    password: ""
+    # Password will be auto-generated if not set
+    
+  # FleetDM configuration
+  config:
+    server:
+      address: "0.0.0.0:8080"
+    mysql:
+      address: "fleetdm-mysql:3306"
+      database: "fleet"
+      username: "fleet"
+      password: ""
+    redis:
+      address: "fleetdm-redis-master:6379"
+      password: ""
+    logging:
+      json: true
+      debug: false
+    auth:
+      jwt_key: ""  # Auto-generated if not set
+    osquery:
+      node_key_size: 24
+      host_identifier: "instance"
+      enroll_secret: ""  # Auto-generated if not set
+  
+  # Service configuration
+  service:
+    type: NodePort
+    port: 8080
+    nodePort: 30080
+    
+  # Ingress configuration
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: fleetdm.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+      
+  # Job for database preparation
+  prepareDB:
+    enabled: true
+    image:
+      repository: fleetdm/fleet
+      tag: "4.45.0"
+    backoffLimit: 3
+    
+  # Resource limits
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+      
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+
+# MySQL Configuration (Bitnami chart)
+mysql:
+  enabled: true
+  auth:
+    rootPassword: ""
+    database: "fleet"
+    username: "fleet"
+    password: ""
+    # Passwords will be auto-generated if not set
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+  architecture: standalone
+
+# Redis Configuration (Bitnami chart)
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: ""
+    # Password will be auto-generated if not set
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+  architecture: standalone
+

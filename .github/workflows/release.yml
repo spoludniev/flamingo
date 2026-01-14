@@ -1,0 +1,194 @@
+name: Release Helm Chart
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'helm-chart/**'
+      - '.github/workflows/release.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'helm-chart/**'
+  release:
+    types: [created]
+
+env:
+  HELM_VERSION: "3.13.0"
+  CHART_PATH: "./helm-chart"
+
+jobs:
+  lint:
+    name: Lint Helm Chart
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Add Bitnami Helm repository
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+
+      - name: Lint Helm chart
+        run: |
+          helm lint ${{ env.CHART_PATH }}
+          helm dependency update ${{ env.CHART_PATH }}
+          helm dependency build ${{ env.CHART_PATH }}
+
+      - name: Validate chart values
+        run: |
+          helm template test-release ${{ env.CHART_PATH }} --debug
+
+  test:
+    name: Test Helm Chart Installation
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Set up Kind
+        uses: helm/kind-action@v1.8.0
+        with:
+          version: "v0.20.0"
+
+      - name: Create Kind cluster
+        run: |
+          kind create cluster --name fleetdm-test --wait 5m
+
+      - name: Add Bitnami Helm repository
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+
+      - name: Install chart
+        run: |
+          helm dependency update ${{ env.CHART_PATH }}
+          helm install fleetdm-test ${{ env.CHART_PATH }} \
+            --namespace fleetdm \
+            --create-namespace \
+            --wait \
+            --timeout 10m \
+            --set mysql.auth.rootPassword=test-root-password \
+            --set mysql.auth.password=test-password \
+            --set redis.auth.password=test-redis-password \
+            --set fleetdm.config.mysql.password=test-password \
+            --set fleetdm.config.redis.password=test-redis-password
+
+      - name: Verify installation
+        run: |
+          kubectl wait --for=condition=ready pod -n fleetdm -l app.kubernetes.io/name=fleetdm --timeout=300s || true
+          kubectl get all -n fleetdm
+
+      - name: Cleanup
+        if: always()
+        run: |
+          kind delete cluster --name fleetdm-test
+
+  package:
+    name: Package Helm Chart
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Add Bitnami Helm repository
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+
+      - name: Package chart
+        run: |
+          helm dependency update ${{ env.CHART_PATH }}
+          helm package ${{ env.CHART_PATH }}
+
+      - name: Upload chart artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: helm-chart
+          path: "*.tgz"
+          retention-days: 30
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: package
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Download chart artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: helm-chart
+
+      - name: Extract chart version
+        id: chart-version
+        run: |
+          CHART_VERSION=$(helm show chart ${{ env.CHART_PATH }} | grep '^version:' | awk '{print $2}')
+          echo "version=$CHART_VERSION" >> $GITHUB_OUTPUT
+          echo "Chart version: $CHART_VERSION"
+
+      - name: Create Git tag
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ steps.chart-version.outputs.version }}" -m "Release Helm chart v${{ steps.chart-version.outputs.version }}"
+          git push origin "v${{ steps.chart-version.outputs.version }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "*.tgz"
+          tag_name: "v${{ steps.chart-version.outputs.version }}"
+          name: "FleetDM Helm Chart v${{ steps.chart-version.outputs.version }}"
+          body: |
+            ## FleetDM Helm Chart Release
+
+            **Version:** ${{ steps.chart-version.outputs.version }}
+
+            ### Installation
+
+            ```bash
+            helm install fleetdm fleetdm-*.tgz \
+              --namespace fleetdm \
+              --create-namespace
+            ```
+
+            ### Changes
+
+            See the [changelog](https://github.com/${{ github.repository }}/compare/HEAD...v${{ steps.chart-version.outputs.version }}) for details.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

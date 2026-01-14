@@ -1,0 +1,32 @@
+{{- if .Values.fleetdm.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "fleetdm.fullname" . }}-config
+  labels:
+    {{- include "fleetdm.labels" . | nindent 4 }}
+data:
+  fleet.yml: |
+    server:
+      address: {{ .Values.fleetdm.config.server.address }}
+      tls: {{ .Values.fleetdm.config.server.tls | default false }}
+      tls_compat: false
+    mysql:
+      address: {{ include "fleetdm.mysql.address" . }}
+      database: {{ .Values.fleetdm.config.mysql.database | default "fleet" }}
+      username: {{ .Values.fleetdm.config.mysql.username | default "fleet" }}
+      password_path: /etc/fleetdm/secrets/mysql-password
+    redis:
+      address: {{ include "fleetdm.redis.address" . }}
+      password_path: /etc/fleetdm/secrets/redis-password
+    logging:
+      json: {{ .Values.fleetdm.config.logging.json | default true }}
+      debug: {{ .Values.fleetdm.config.logging.debug | default false }}
+    auth:
+      jwt_key_path: /etc/fleetdm/secrets/jwt-key
+    osquery:
+      node_key_size: {{ .Values.fleetdm.config.osquery.node_key_size | default 24 }}
+      host_identifier: {{ .Values.fleetdm.config.osquery.host_identifier | default "instance" }}
+      enroll_secret_path: /etc/fleetdm/secrets/enroll-secret
+{{- end }}
+
