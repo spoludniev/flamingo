@@ -67,12 +67,14 @@ graph TB
         DEVS[Developers]
     end
     
-    %% Connections
+    %% Connections - User Traffic
     USERS -->|HTTPS| LB
-    LB -->|Internal| BE1
-    LB -->|Internal| BE2
-    BE1 -->|Serve| FE1
-    BE2 -->|Serve| FE2
+    LB -->|Route| FE1
+    LB -->|Route| FE2
+    FE1 -->|API Calls| BE1
+    FE2 -->|API Calls| BE2
+    
+    %% Connections - Database
     BE1 -->|Read/Write| DB_PEER
     BE2 -->|Read/Write| DB_PEER
     DB_PEER -->|VPC Peering| MONGO_PRI
@@ -81,25 +83,48 @@ graph TB
     MONGO_PRI -->|Backup| MONGO_DR
     MONGO_DR -->|S3 Replication| S3
     
+    %% Connections - CI/CD
     DEVS -->|Push Code| GITHUB
     GITHUB -->|Trigger| CODEBUILD
     CODEBUILD -->|Build & Push| ECR
     ECR -->|Deploy| EKS1
     ECR -->|Deploy| EKS2
     
+    %% Connections - Secrets & Monitoring
     BE1 -->|Read Secrets| SECRETS
     BE2 -->|Read Secrets| SECRETS
-    BE1 -->|Logs & Metrics| MONITORING
-    BE2 -->|Logs & Metrics| MONITORING
+    FE1 -->|Read Secrets| SECRETS
+    FE2 -->|Read Secrets| SECRETS
+    BE1 -->|Send Logs| MONITORING
+    BE2 -->|Send Logs| MONITORING
+    FE1 -->|Send Logs| MONITORING
+    FE2 -->|Send Logs| MONITORING
+    BE1 -->|Send Metrics| MONITORING
+    BE2 -->|Send Metrics| MONITORING
+    FE1 -->|Send Metrics| MONITORING
+    FE2 -->|Send Metrics| MONITORING
     
-    EKS1 -->|Auto-scale| EKS2
-    EKS2 -->|Auto-scale| EKS1
+    %% Connections - Auto-scaling
+    EKS1 -.->|Cluster Autoscaler| EKS2
+    EKS2 -.->|Cluster Autoscaler| EKS1
     
-    style LB fill:#FF9900
-    style MONGO_PRI fill:#13a52c
-    style EKS1 fill:#232F3E
-    style EKS2 fill:#232F3E
-    style CODEBUILD fill:#FF9900
-    style SECRETS fill:#232F3E
-    style S3 fill:#569A31
+    %% Styling - AWS Services
+    style LB fill:#FF9900,stroke:#333,stroke-width:2px
+    style MONGO_PRI fill:#13a52c,stroke:#333,stroke-width:2px
+    style MONGO_SEC1 fill:#13a52c,stroke:#333,stroke-width:2px
+    style MONGO_SEC2 fill:#13a52c,stroke:#333,stroke-width:2px
+    style MONGO_DR fill:#13a52c,stroke:#333,stroke-width:2px
+    style EKS1 fill:#232F3E,stroke:#333,stroke-width:2px,color:#fff
+    style EKS2 fill:#232F3E,stroke:#333,stroke-width:2px,color:#fff
+    style CODEBUILD fill:#FF9900,stroke:#333,stroke-width:2px
+    style ECR fill:#FF9900,stroke:#333,stroke-width:2px
+    style SECRETS fill:#232F3E,stroke:#333,stroke-width:2px,color:#fff
+    style MONITORING fill:#232F3E,stroke:#333,stroke-width:2px,color:#fff
+    style S3 fill:#569A31,stroke:#333,stroke-width:2px,color:#fff
+    style NAT fill:#FF9900,stroke:#333,stroke-width:2px
+    style DB_PEER fill:#232F3E,stroke:#333,stroke-width:2px,color:#fff
+    style BE1 fill:#ea4335,stroke:#333,stroke-width:2px,color:#fff
+    style BE2 fill:#ea4335,stroke:#333,stroke-width:2px,color:#fff
+    style FE1 fill:#4285f4,stroke:#333,stroke-width:2px,color:#fff
+    style FE2 fill:#4285f4,stroke:#333,stroke-width:2px,color:#fff
 
