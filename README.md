@@ -7,8 +7,8 @@ This repository contains a Helm chart for deploying FleetDM (an open-source devi
 FleetDM is a powerful device management platform that uses osquery to manage and monitor devices. This Helm chart packages:
 
 - **FleetDM Server**: The main FleetDM application
-- **MySQL**: Database backend (using Bitnami MySQL chart)
-- **Redis**: Caching and session storage (using Bitnami Redis chart)
+- **MySQL**: Database backend (standalone MySQL 8.0 deployment)
+- **Redis**: Caching and session storage (standalone Redis 7 deployment)
 
 ## Prerequisites
 

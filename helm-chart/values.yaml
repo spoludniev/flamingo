@@ -89,7 +89,7 @@ fleetdm:
     runAsUser: 1000
     fsGroup: 1000
 
-# MySQL Configuration (Bitnami chart)
+# MySQL Configuration (Standalone deployment)
 mysql:
   enabled: true
   auth:
@@ -109,13 +109,11 @@ mysql:
       requests:
         cpu: 250m
         memory: 256Mi
-  architecture: standalone
 
-# Redis Configuration (Bitnami chart)
+# Redis Configuration (Standalone deployment)
 redis:
   enabled: true
   auth:
-    enabled: true
     password: ""
     # Password will be auto-generated if not set
   master:
@@ -129,5 +127,4 @@ redis:
       requests:
         cpu: 250m
         memory: 256Mi
-  architecture: standalone
 

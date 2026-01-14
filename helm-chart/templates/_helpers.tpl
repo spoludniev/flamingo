@@ -75,7 +75,7 @@ Generate MySQL password secret name
 */}}
 {{- define "fleetdm.mysql.secretName" -}}
 {{- if .Values.mysql.enabled }}
-{{- printf "%s-mysql" (include "fleetdm.fullname" .) }}
+{{- printf "%s-mysql-secret" (include "fleetdm.fullname" .) }}
 {{- else }}
 {{- printf "%s-mysql-secret" (include "fleetdm.fullname" .) }}
 {{- end }}
@@ -86,7 +86,7 @@ Generate Redis password secret name
 */}}
 {{- define "fleetdm.redis.secretName" -}}
 {{- if .Values.redis.enabled }}
-{{- printf "%s-redis" (include "fleetdm.fullname" .) }}
+{{- printf "%s-redis-secret" (include "fleetdm.fullname" .) }}
 {{- else }}
 {{- printf "%s-redis-secret" (include "fleetdm.fullname" .) }}
 {{- end }}

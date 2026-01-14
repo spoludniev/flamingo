@@ -32,16 +32,9 @@ jobs:
         with:
           version: ${{ env.HELM_VERSION }}
 
-      - name: Add Bitnami Helm repository
-        run: |
-          helm repo add bitnami https://charts.bitnami.com/bitnami
-          helm repo update
-
       - name: Lint Helm chart
         run: |
           helm lint ${{ env.CHART_PATH }}
-          helm dependency update ${{ env.CHART_PATH }}
-          helm dependency build ${{ env.CHART_PATH }}
 
       - name: Validate chart values
         run: |
@@ -69,14 +62,8 @@ jobs:
         run: |
           kind create cluster --name fleetdm-test --wait 5m
 
-      - name: Add Bitnami Helm repository
-        run: |
-          helm repo add bitnami https://charts.bitnami.com/bitnami
-          helm repo update
-
       - name: Install chart
         run: |
-          helm dependency update ${{ env.CHART_PATH }}
           helm install fleetdm-test ${{ env.CHART_PATH }} \
             --namespace fleetdm \
             --create-namespace \
@@ -112,14 +99,8 @@ jobs:
         with:
           version: ${{ env.HELM_VERSION }}
 
-      - name: Add Bitnami Helm repository
-        run: |
-          helm repo add bitnami https://charts.bitnami.com/bitnami
-          helm repo update
-
       - name: Package chart
         run: |
-          helm dependency update ${{ env.CHART_PATH }}
           helm package ${{ env.CHART_PATH }}
 
       - name: Upload chart artifact

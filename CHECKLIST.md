@@ -4,8 +4,8 @@
 
 ### 1. Helm Chart
 - [x] FleetDM Server deployment
-- [x] MySQL dependency (Bitnami chart)
-- [x] Redis dependency (Bitnami chart)
+- [x] MySQL deployment (standalone MySQL 8.0)
+- [x] Redis deployment (standalone Redis 7)
 - [x] Complete Chart.yaml with dependencies
 - [x] Comprehensive values.yaml
 - [x] All required templates (deployment, service, ingress, configmap, secrets, job)

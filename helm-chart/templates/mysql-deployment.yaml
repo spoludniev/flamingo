@@ -1,0 +1,144 @@
+{{- if .Values.mysql.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fleetdm.fullname" . }}-mysql
+  labels:
+    {{- include "fleetdm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "fleetdm.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mysql
+  template:
+    metadata:
+      labels:
+        {{- include "fleetdm.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: "mysql:8.0"
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "fleetdm.fullname" . }}-mysql-secret
+              key: root-password
+        - name: MYSQL_DATABASE
+          value: {{ .Values.mysql.auth.database | default "fleet" }}
+        - name: MYSQL_USER
+          value: {{ .Values.mysql.auth.username | default "fleet" }}
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "fleetdm.fullname" . }}-mysql-secret
+              key: password
+        ports:
+        - name: mysql
+          containerPort: 3306
+          protocol: TCP
+        volumeMounts:
+        - name: mysql-data
+          mountPath: /var/lib/mysql
+        {{- with .Values.mysql.primary.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        livenessProbe:
+          exec:
+            command:
+            - mysqladmin
+            - ping
+            - -h
+            - localhost
+            - -u
+            - root
+            - -p$(MYSQL_ROOT_PASSWORD)
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - mysqladmin
+            - ping
+            - -h
+            - localhost
+            - -u
+            - root
+            - -p$(MYSQL_ROOT_PASSWORD)
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: mysql-data
+        {{- if .Values.mysql.primary.persistence.enabled }}
+        persistentVolumeClaim:
+          claimName: {{ include "fleetdm.fullname" . }}-mysql-pvc
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "fleetdm.fullname" . }}-mysql
+  labels:
+    {{- include "fleetdm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3306
+    targetPort: mysql
+    protocol: TCP
+    name: mysql
+  selector:
+    {{- include "fleetdm.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+---
+{{- if .Values.mysql.primary.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "fleetdm.fullname" . }}-mysql-pvc
+  labels:
+    {{- include "fleetdm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.mysql.primary.persistence.size | default "8Gi" }}
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "fleetdm.fullname" . }}-mysql-secret
+  labels:
+    {{- include "fleetdm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+type: Opaque
+{{- $fleetdmSecretName := printf "%s-secrets" (include "fleetdm.fullname" .) }}
+{{- $existingFleetdmSecret := (lookup "v1" "Secret" .Release.Namespace $fleetdmSecretName) }}
+{{- $mysqlPassword := "" }}
+{{- if .Values.mysql.auth.password }}
+  {{- $mysqlPassword = .Values.mysql.auth.password }}
+{{- else if and $existingFleetdmSecret (index $existingFleetdmSecret.data "mysql-password") }}
+  {{- $mysqlPassword = (index $existingFleetdmSecret.data "mysql-password" | b64dec) }}
+{{- else }}
+  {{- $mysqlPassword = (randAlphaNum 32) }}
+{{- end }}
+data:
+  root-password: {{ .Values.mysql.auth.rootPassword | default (randAlphaNum 32) | b64enc }}
+  password: {{ $mysqlPassword | b64enc }}
+{{- end }}
+

@@ -61,7 +61,6 @@ cluster-minikube: ## Create local Kubernetes cluster (Minikube)
 install: ## Install the Helm chart
 	@echo "Installing FleetDM Helm chart..."
 	@kubectl create namespace $(NAMESPACE) --dry-run=client -o yaml | kubectl apply -f -
-	@helm dependency update $(CHART_PATH)
 	@helm upgrade --install $(RELEASE_NAME) $(CHART_PATH) \
 		--namespace $(NAMESPACE) \
 		--wait \

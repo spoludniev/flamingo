@@ -10,7 +10,7 @@ This project demonstrates cloud infrastructure, containerization, and deployment
 
 #### 1. Helm Chart (`helm-chart/`)
 - **Complete Helm chart** for FleetDM with MySQL and Redis dependencies
-- **Chart.yaml**: Chart metadata with Bitnami dependencies
+- **Chart.yaml**: Chart metadata (no external dependencies)
 - **values.yaml**: Comprehensive configuration options
 - **Templates**:
   - `deployment.yaml`: FleetDM server deployment with health checks
@@ -168,7 +168,7 @@ make verify
 ## Key Technical Highlights
 
 ### Helm Chart Best Practices
-- ✅ Dependency management (Bitnami charts)
+- ✅ Self-contained deployments (no external chart dependencies)
 - ✅ Template helpers for reusability
 - ✅ Secret preservation on upgrades
 - ✅ Health checks and init containers
@@ -230,7 +230,7 @@ While this is a demonstration project, it includes:
 - **Helm**: Package management
 - **Kind/Minikube**: Local cluster management
 - **GitHub Actions**: CI/CD automation
-- **Bitnami Charts**: MySQL and Redis dependencies
+- **Standalone Deployments**: MySQL and Redis (no external dependencies)
 - **FleetDM**: Device management platform
 
 ## Documentation
