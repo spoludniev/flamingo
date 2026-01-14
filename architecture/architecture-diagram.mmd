@@ -5,6 +5,7 @@ graph TB
                 subgraph "Public Subnets"
                     LB[Application Load Balancer<br/>ALB]
                     NAT[NAT Gateway]
+                    BASTION[Bastion Host<br/>EC2 Instance]
                 end
                 
                 subgraph "Private Subnets - AZ1"
@@ -21,12 +22,19 @@ graph TB
                 
                 subgraph "Private Subnets - AZ2"
                     EKS2[EKS Node Group 2<br/>t3.large/m5.xlarge]
-                    BE2[Flask Backend Pods]
-                    FE2[React Frontend Pods]
+                    BE2[Flask Backend Pods<br/>HPA: 3-50 replicas]
+                    FE2[React Frontend Pods<br/>HPA: 3-20 replicas]
+                end
+                
+                subgraph "Private Subnets - AZ3"
+                    EKS3[EKS Node Group 3<br/>t3.large/m5.xlarge]
+                    BE3[Flask Backend Pods<br/>HPA: 3-50 replicas]
+                    FE3[React Frontend Pods<br/>HPA: 3-20 replicas]
                 end
                 
                 subgraph "Database Subnets"
-                    DB_PEER[VPC Peering]
+                    DB_PEER[VPC Peering<br/>to MongoDB Atlas]
+                    VPC_ENDPOINTS[VPC Endpoints<br/>ECR, Secrets, CloudWatch]
                 end
             end
         end
@@ -71,12 +79,15 @@ graph TB
     USERS -->|HTTPS| LB
     LB -->|Route| FE1
     LB -->|Route| FE2
+    LB -->|Route| FE3
     FE1 -->|API Calls| BE1
     FE2 -->|API Calls| BE2
+    FE3 -->|API Calls| BE3
     
     %% Connections - Database
     BE1 -->|Read/Write| DB_PEER
     BE2 -->|Read/Write| DB_PEER
+    BE3 -->|Read/Write| DB_PEER
     DB_PEER -->|VPC Peering| MONGO_PRI
     MONGO_PRI -->|Replication| MONGO_SEC1
     MONGO_PRI -->|Replication| MONGO_SEC2
@@ -87,26 +98,46 @@ graph TB
     DEVS -->|Push Code| GITHUB
     GITHUB -->|Trigger| CODEBUILD
     CODEBUILD -->|Build & Push| ECR
-    ECR -->|Deploy| EKS1
-    ECR -->|Deploy| EKS2
+    ECR -->|Pull via VPC Endpoint| VPC_ENDPOINTS
+    VPC_ENDPOINTS -->|Deploy| EKS1
+    VPC_ENDPOINTS -->|Deploy| EKS2
+    VPC_ENDPOINTS -->|Deploy| EKS3
     
-    %% Connections - Secrets & Monitoring
-    BE1 -->|Read Secrets| SECRETS
-    BE2 -->|Read Secrets| SECRETS
-    FE1 -->|Read Secrets| SECRETS
-    FE2 -->|Read Secrets| SECRETS
-    BE1 -->|Send Logs| MONITORING
-    BE2 -->|Send Logs| MONITORING
-    FE1 -->|Send Logs| MONITORING
-    FE2 -->|Send Logs| MONITORING
+    %% Connections - Secrets & Monitoring via VPC Endpoints
+    BE1 -->|Read Secrets| VPC_ENDPOINTS
+    BE2 -->|Read Secrets| VPC_ENDPOINTS
+    BE3 -->|Read Secrets| VPC_ENDPOINTS
+    FE1 -->|Read Secrets| VPC_ENDPOINTS
+    FE2 -->|Read Secrets| VPC_ENDPOINTS
+    FE3 -->|Read Secrets| VPC_ENDPOINTS
+    VPC_ENDPOINTS -->|Private Connection| SECRETS
+    BE1 -->|Send Logs| VPC_ENDPOINTS
+    BE2 -->|Send Logs| VPC_ENDPOINTS
+    BE3 -->|Send Logs| VPC_ENDPOINTS
+    FE1 -->|Send Logs| VPC_ENDPOINTS
+    FE2 -->|Send Logs| VPC_ENDPOINTS
+    FE3 -->|Send Logs| VPC_ENDPOINTS
+    VPC_ENDPOINTS -->|Private Connection| MONITORING
     BE1 -->|Send Metrics| MONITORING
     BE2 -->|Send Metrics| MONITORING
+    BE3 -->|Send Metrics| MONITORING
     FE1 -->|Send Metrics| MONITORING
     FE2 -->|Send Metrics| MONITORING
+    FE3 -->|Send Metrics| MONITORING
     
-    %% Connections - Auto-scaling
-    EKS1 -.->|Cluster Autoscaler| EKS2
-    EKS2 -.->|Cluster Autoscaler| EKS1
+    %% Connections - Auto-scaling (Cluster Autoscaler manages all node groups)
+    EKS1 -.->|HPA Metrics| MONITORING
+    EKS2 -.->|HPA Metrics| MONITORING
+    EKS3 -.->|HPA Metrics| MONITORING
+    MONITORING -.->|Scale Decision| EKS1
+    MONITORING -.->|Scale Decision| EKS2
+    MONITORING -.->|Scale Decision| EKS3
+    
+    %% Connections - Developer Access
+    DEVS -->|SSH| BASTION
+    BASTION -->|kubectl| EKS1
+    BASTION -->|kubectl| EKS2
+    BASTION -->|kubectl| EKS3
     
     %% Styling - AWS Services
     style LB fill:#FF9900,stroke:#333,stroke-width:2px
@@ -125,6 +156,11 @@ graph TB
     style DB_PEER fill:#232F3E,stroke:#333,stroke-width:2px,color:#fff
     style BE1 fill:#ea4335,stroke:#333,stroke-width:2px,color:#fff
     style BE2 fill:#ea4335,stroke:#333,stroke-width:2px,color:#fff
+    style BE3 fill:#ea4335,stroke:#333,stroke-width:2px,color:#fff
     style FE1 fill:#4285f4,stroke:#333,stroke-width:2px,color:#fff
     style FE2 fill:#4285f4,stroke:#333,stroke-width:2px,color:#fff
+    style FE3 fill:#4285f4,stroke:#333,stroke-width:2px,color:#fff
+    style EKS3 fill:#232F3E,stroke:#333,stroke-width:2px,color:#fff
+    style VPC_ENDPOINTS fill:#232F3E,stroke:#333,stroke-width:2px,color:#fff
+    style BASTION fill:#FF9900,stroke:#333,stroke-width:2px
 
