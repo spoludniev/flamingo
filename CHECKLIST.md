@@ -52,36 +52,39 @@
 ### 1. Architectural Design Document
 - [x] 1-2 page well-structured document
 - [x] Cloud Environment Structure
-  - [x] Recommended number of projects/accounts
-  - [x] Purpose of each environment
-  - [x] Justification for structure
-  - [x] Provider choice justification (GCP)
+  - [x] Recommended number of AWS accounts (3-account strategy)
+  - [x] Purpose of each environment (Dev, Staging, Prod)
+  - [x] Justification for structure (AWS Organizations)
+  - [x] Provider choice justification (AWS)
 - [x] Network Design
-  - [x] VPC architecture
-  - [x] Subnet design (public/private/database)
-  - [x] Security (firewalls, security groups, network policies)
-  - [x] Multi-AZ considerations
+  - [x] VPC architecture (multi-AZ, public/private/database subnets)
+  - [x] Subnet design (public/private/database subnets)
+  - [x] Security (Security Groups, Network ACLs, Network Policies)
+  - [x] Multi-AZ considerations (3 AZs per region)
+  - [x] VPC Endpoints for private AWS service access
 - [x] Compute Platform
-  - [x] Managed Kubernetes (GKE) approach
-  - [x] Node groups configuration
-  - [x] Scaling policies (horizontal & vertical)
-  - [x] Resource allocation
-  - [x] Containerization strategy
-  - [x] Image building process
-  - [x] Container registry management
-  - [x] CI/CD integration
+  - [x] Managed Kubernetes (EKS) approach
+  - [x] Node groups configuration (managed node groups, t3.large/m5.xlarge)
+  - [x] Scaling policies (HPA, VPA, Cluster Autoscaler)
+  - [x] Resource allocation (CPU/memory requests and limits)
+  - [x] Containerization strategy (multi-stage builds, ECR)
+  - [x] Image building process (CodeBuild/CodePipeline)
+  - [x] Container registry management (Amazon ECR)
+  - [x] CI/CD integration (AWS CodePipeline/CodeBuild)
 - [x] Database
-  - [x] Managed MongoDB service recommendation
+  - [x] Managed MongoDB service recommendation (MongoDB Atlas on AWS)
   - [x] Justification for choice (MongoDB Atlas)
-  - [x] Automated backups strategy
-  - [x] High availability (multi-AZ/replicas)
-  - [x] Disaster recovery strategy
+  - [x] Automated backups strategy (6-hour snapshots, S3 storage)
+  - [x] High availability (multi-AZ/replicas, 3-node replica set)
+  - [x] Disaster recovery strategy (RTO: 1 hour, RPO: 6 hours, multi-region)
 
 ### 2. High-Level Architecture Diagram
-- [x] Mermaid diagram (renderable format)
-- [x] ASCII text diagram
-- [x] Draw.io instructions for professional diagram
-- [x] Multiple export options documented
+- [x] Mermaid diagram (renderable format) - AWS architecture
+- [x] All AWS services properly labeled (EKS, ALB, ECR, CodeBuild, etc.)
+- [x] Multi-AZ deployment shown (3 AZs)
+- [x] VPC Endpoints and Security Groups included
+- [x] Complete CI/CD pipeline flow
+- [x] All connections properly labeled
 
 ## Additional Deliverables
 
