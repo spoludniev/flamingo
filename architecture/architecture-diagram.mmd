@@ -1,15 +1,15 @@
 graph TB
-    subgraph "GCP Organization"
-        subgraph "Production Project"
+    subgraph "AWS Organization"
+        subgraph "Production Account"
             subgraph "VPC: company-prod-vpc"
                 subgraph "Public Subnets"
-                    LB[Cloud Load Balancer]
+                    LB[Application Load Balancer<br/>ALB]
                     NAT[NAT Gateway]
                 end
                 
                 subgraph "Private Subnets - AZ1"
-                    GKE1[GKE Node Pool 1<br/>e2-standard-4]
-                    subgraph "Kubernetes Cluster"
+                    EKS1[EKS Node Group 1<br/>t3.large/m5.xlarge]
+                    subgraph "EKS Cluster"
                         subgraph "Backend Namespace"
                             BE1[Flask Backend Pods<br/>HPA: 3-50 replicas]
                         end
@@ -20,7 +20,7 @@ graph TB
                 end
                 
                 subgraph "Private Subnets - AZ2"
-                    GKE2[GKE Node Pool 2<br/>e2-standard-4]
+                    EKS2[EKS Node Group 2<br/>t3.large/m5.xlarge]
                     BE2[Flask Backend Pods]
                     FE2[React Frontend Pods]
                 end
@@ -31,34 +31,35 @@ graph TB
             end
         end
         
-        subgraph "Staging Project"
+        subgraph "Staging Account"
             STG_VPC[Staging VPC]
-            STG_GKE[Staging GKE]
+            STG_EKS[Staging EKS]
         end
         
-        subgraph "Development Project"
+        subgraph "Development Account"
             DEV_VPC[Dev VPC]
             DEV_EKS[Dev EKS]
         end
     end
     
-    subgraph "MongoDB Atlas"
-        subgraph "Primary Region: us-central1"
+    subgraph "MongoDB Atlas on AWS"
+        subgraph "Primary Region: us-east-1"
             MONGO_PRI[MongoDB Primary<br/>M10 Cluster]
             MONGO_SEC1[MongoDB Secondary 1]
             MONGO_SEC2[MongoDB Secondary 2]
         end
-        subgraph "Secondary Region: us-east1"
+        subgraph "Secondary Region: us-west-2"
             MONGO_DR[MongoDB DR Replica]
         end
     end
     
-    subgraph "External Services"
+    subgraph "AWS Services"
         GITHUB[GitHub<br/>Source Code]
-        CLOUD_BUILD[Cloud Build<br/>CI/CD Pipeline]
-        GCR[Container Registry<br/>GCR/Artifact Registry]
-        SECRETS[Secret Manager]
-        MONITORING[Cloud Logging<br/>Prometheus/Grafana]
+        CODEBUILD[CodeBuild/CodePipeline<br/>CI/CD Pipeline]
+        ECR[Elastic Container Registry<br/>ECR]
+        SECRETS[AWS Secrets Manager]
+        MONITORING[CloudWatch Logs<br/>Prometheus/Grafana]
+        S3[S3<br/>Backups & Artifacts]
     end
     
     subgraph "Users"
@@ -78,25 +79,27 @@ graph TB
     MONGO_PRI -->|Replication| MONGO_SEC1
     MONGO_PRI -->|Replication| MONGO_SEC2
     MONGO_PRI -->|Backup| MONGO_DR
+    MONGO_DR -->|S3 Replication| S3
     
     DEVS -->|Push Code| GITHUB
-    GITHUB -->|Trigger| CLOUD_BUILD
-    CLOUD_BUILD -->|Build & Push| GCR
-    GCR -->|Deploy| GKE1
-    GCR -->|Deploy| GKE2
+    GITHUB -->|Trigger| CODEBUILD
+    CODEBUILD -->|Build & Push| ECR
+    ECR -->|Deploy| EKS1
+    ECR -->|Deploy| EKS2
     
     BE1 -->|Read Secrets| SECRETS
     BE2 -->|Read Secrets| SECRETS
     BE1 -->|Logs & Metrics| MONITORING
     BE2 -->|Logs & Metrics| MONITORING
     
-    GKE1 -->|Auto-scale| GKE2
-    GKE2 -->|Auto-scale| GKE1
+    EKS1 -->|Auto-scale| EKS2
+    EKS2 -->|Auto-scale| EKS1
     
-    style LB fill:#4285f4
+    style LB fill:#FF9900
     style MONGO_PRI fill:#13a52c
-    style GKE1 fill:#ea4335
-    style GKE2 fill:#ea4335
-    style CLOUD_BUILD fill:#fbbc04
-    style SECRETS fill:#34a853
+    style EKS1 fill:#232F3E
+    style EKS2 fill:#232F3E
+    style CODEBUILD fill:#FF9900
+    style SECRETS fill:#232F3E
+    style S3 fill:#569A31
 
